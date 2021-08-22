@@ -50,10 +50,17 @@ static void fprint_timestamp(
 	/* XXX: there is no error-checking, IMHO it's better to lose messages
 	 *      then to die and stop service */
 	const char* sprio = getprioname(priority);
+#if defined(__APPLE__) && defined(__MACH__)
+	if (appendix)
+		fprintf(fd, "%lu.%6.6d %s %s:%u %s(...) %s: %s\n", tv.tv_sec, tv.tv_usec, sprio, file, line, func, message, appendix);
+	else
+		fprintf(fd, "%lu.%6.6d %s %s:%u %s(...) %s\n", tv.tv_sec, tv.tv_usec, sprio, file, line, func, message);
+#else
 	if (appendix)
 		fprintf(fd, "%lu.%6.6lu %s %s:%u %s(...) %s: %s\n", tv.tv_sec, tv.tv_usec, sprio, file, line, func, message, appendix);
 	else
 		fprintf(fd, "%lu.%6.6lu %s %s:%u %s(...) %s\n", tv.tv_sec, tv.tv_usec, sprio, file, line, func, message);
+#endif
 }
 
 static void stderr_msg(const char *file, int line, const char *func, int priority, const char *message, const char *appendix)

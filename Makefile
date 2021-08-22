@@ -2,14 +2,14 @@ ifdef DISABLE_SHADOWSOCKS
 OBJS := parser.o main.o redsocks.o log.o direct.o ipcache.o autoproxy.o http-connect.o \
         socks4.o socks5.o http-relay.o base.o base64.o md5.o http-auth.o utils.o redudp.o socks5-udp.o \
         tcpdns.o gen/version.o
-CFLAGS +=-fPIC -O3 -DDISABLE_SHADOWSOCKS
+CFLAGS += -DDISABLE_SHADOWSOCKS
 FEATURES += DISABLE_SHADOWSOCKS
 else
 OBJS := parser.o main.o redsocks.o log.o direct.o ipcache.o autoproxy.o encrypt.o shadowsocks.o http-connect.o \
         socks4.o socks5.o http-relay.o base.o base64.o md5.o http-auth.o utils.o redudp.o socks5-udp.o shadowsocks-udp.o \
         tcpdns.o gen/version.o
-CFLAGS +=-fPIC -O3
 endif
+CFLAGS += -fPIC -mmacosx-version-min=10.9
 SRCS := $(OBJS:.o=.c)
 CONF := config.h
 DEPS := .depend
@@ -61,7 +61,7 @@ override LDFLAGS += -Wl,-static -static -static-libgcc -s
 override FEATURES += STATIC_COMPILE
 endif
 
-all: $(OUT)
+all: debug
 
 .PHONY: all clean distclean
 
@@ -95,11 +95,8 @@ gen/version.c: *.c *.h gen/.build
 	echo '#include "../version.h"' >> $@.tmp
 	echo 'const char* redsocks_version = ' >> $@.tmp
 	if [ -d .git ]; then \
-		echo '"redsocks.git/'`git describe --tags`' $(CRYPTO)"'; \
-		if [ `git status --porcelain | grep -v -c '^??'` != 0 ]; then \
-			echo '"-unclean"'; \
-		fi; \
-		echo '"\\n"'; \
+		echo '"redsocks.git/'`git describe --dirty --always`' $(CRYPTO)"'; \
+		echo '"\n"'; \
 		echo '"Features: $(FEATURES)"'; \
 	else \
 		echo '"redsocks/$(VERSION) $(CRYPTO)"'; \
@@ -149,14 +146,24 @@ $(DEPS): $(OSX_HEADERS) $(SRCS)
 
 -include $(DEPS)
 
+# see: https://www.gnu.org/software/make/manual/html_node/Target_002dspecific.html
+# Those two flags must present at the same time  o.w. debug symbol cannot be generated
+debug: CPPFLAGS += -g -DDEBUG
+debug: CFLAGS += -O0
+debug: $(OUT)
+
+# see: https://stackoverflow.com/questions/15548023/clang-optimization-levels
+release: CFLAGS += -O2
+release: $(OUT)
+
 $(OUT): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 clean:
 	$(RM) $(CONF) $(OBJS)
+	$(RM) -r gen
 
 distclean: clean
 	$(RM) $(OUT)
 	$(RM) tags $(DEPS)
-	$(RM) -r gen
 	$(RM) -r $(OSX_ROOT_PATH)

@@ -113,6 +113,12 @@ static void wait_for_network()
     } while (err != 0);
 }
 
+#ifdef USE_CRYPTO_OPENSSL
+// see: https://www.openssl.org/docs/manmaster/man3/OPENSSL_VERSION_NUMBER.html
+#include <openssl/opensslv.h>
+#include <openssl/crypto.h>
+#endif
+
 int main(int argc, char **argv)
 {
     int error;
@@ -144,6 +150,10 @@ int main(int argc, char **argv)
             puts(redsocks_version);
             printf("Built with libevent-%s\n", LIBEVENT_VERSION);
             printf("Runs  with libevent-%s\n", event_get_version());
+#ifdef USE_CRYPTO_OPENSSL
+            printf("Built with %s\n", OPENSSL_VERSION_TEXT);
+            printf("Runs  with %s\n", OpenSSL_version(OPENSSL_VERSION));
+#endif
             if (LIBEVENT_VERSION_NUMBER != event_get_version_number()) {
                 printf("Warning: libevent version number mismatch.\n"
                        "  Headers: %8x\n"

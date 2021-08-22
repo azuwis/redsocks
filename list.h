@@ -31,6 +31,12 @@ typedef struct list_head_t {
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
 
+/* see: https://stackoverflow.com/questions/142508/how-do-i-check-os-with-a-preprocessor-directive */
+#if defined(__APPLE__) && defined(__MACH__)
+/* Undefine the same macro in <sys/queue.h> */
+#undef LIST_HEAD
+#endif
+
 #define LIST_HEAD(name) \
 	struct list_head_t name = LIST_HEAD_INIT(name)
 

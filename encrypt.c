@@ -278,7 +278,7 @@ static void enc_table_init(enc_info * info, const char *pass)
     }
 }
 
-int cipher_iv_size(const cipher_kt_t *cipher)
+int cipher_iv_size(const EVP_CIPHER *cipher)
 {
 #if defined(USE_CRYPTO_OPENSSL)
     return EVP_CIPHER_iv_length(cipher);
@@ -290,7 +290,7 @@ int cipher_iv_size(const cipher_kt_t *cipher)
 #endif
 }
 
-int cipher_key_size(const cipher_kt_t *cipher)
+int cipher_key_size(const EVP_CIPHER *cipher)
 {
 #if defined(USE_CRYPTO_OPENSSL)
     return EVP_CIPHER_key_length(cipher);
@@ -307,7 +307,7 @@ int cipher_key_size(const cipher_kt_t *cipher)
 #endif
 }
 
-int bytes_to_key(const cipher_kt_t *cipher, const digest_type_t *md,
+int bytes_to_key(const EVP_CIPHER *cipher, const digest_type_t *md,
                  const uint8_t *pass, uint8_t *key, uint8_t *iv)
 {
     size_t datal;
@@ -472,7 +472,7 @@ int rand_bytes(uint8_t *output, int len)
 #endif
 }
 
-const cipher_kt_t *get_cipher_type(int method)
+const EVP_CIPHER *get_cipher_type(int method)
 {
     if (method <= TABLE || method >= CIPHER_NUM) {
         //LOGE("get_cipher_type(): Illegal method");
@@ -547,8 +547,8 @@ static int cipher_context_init(const enc_info * info, cipher_ctx_t *ctx, int enc
     }
 #endif
 
-    cipher_evp_t *evp = &ctx->evp;
-    const cipher_kt_t *cipher = get_cipher_type(method);
+    EVP_CIPHER_CTX *evp = ctx->evp;
+    const EVP_CIPHER *cipher = get_cipher_type(method);
 #if defined(USE_CRYPTO_OPENSSL)
     if (cipher == NULL) {
         // Cipher is not found in OpenSSL library
@@ -642,7 +642,7 @@ static void cipher_context_set_iv(const enc_info * info, cipher_ctx_t *ctx, uint
     }
 #endif
 
-    cipher_evp_t *evp = &ctx->evp;
+    EVP_CIPHER_CTX *evp = ctx->evp;
     if (evp == NULL) {
         //LOGE("cipher_context_set_iv(): Cipher context is null");
         return;
@@ -696,7 +696,7 @@ static void cipher_context_release(enc_info * info, cipher_ctx_t *ctx)
     }
 #endif
 
-    cipher_evp_t *evp = &ctx->evp;
+    EVP_CIPHER_CTX *evp = ctx->evp;
 #if defined(USE_CRYPTO_OPENSSL)
     EVP_CIPHER_CTX_cleanup(evp);
 #elif defined(USE_CRYPTO_POLARSSL)
@@ -716,7 +716,7 @@ static int cipher_context_update(cipher_ctx_t *ctx, uint8_t *output, int *olen,
         return (ret == kCCSuccess) ? 1 : 0;
     }
 #endif
-    cipher_evp_t *evp = &ctx->evp;
+    EVP_CIPHER_CTX *evp = ctx->evp;
 #if defined(USE_CRYPTO_OPENSSL)
     return EVP_CipherUpdate(evp, (uint8_t *)output, olen,
                             (const uint8_t *)input, (size_t)ilen);
@@ -730,7 +730,7 @@ static int cipher_context_update(cipher_ctx_t *ctx, uint8_t *output, int *olen,
 size_t ss_calc_buffer_size(struct enc_ctx * ctx, size_t ilen)
 {
     int method = ctx->info->method;
-    const cipher_kt_t *cipher = get_cipher_type(method);
+    const EVP_CIPHER *cipher = get_cipher_type(method);
 #if defined(USE_CRYPTO_OPENSSL)
     if (ctx->init)
         return ilen + EVP_CIPHER_block_size(cipher); 
@@ -915,8 +915,8 @@ static int enc_key_init(enc_info * info, int method, const char *pass)
 
     uint8_t iv[MAX_IV_LENGTH];
 
-    cipher_kt_t *cipher = NULL;
-    cipher_kt_t cipher_info;
+    EVP_CIPHER *cipher = NULL;
+    EVP_CIPHER *cipher_info;
 
 
     if (method == SALSA20 || method == CHACHA20) {
@@ -925,7 +925,7 @@ static int enc_key_init(enc_info * info, int method, const char *pass)
             //FATAL("Failed to initialize sodium");
         }
         // Fake cipher
-        cipher = (cipher_kt_t *)&cipher_info;
+        cipher = (EVP_CIPHER *)&cipher_info;
 #if defined(USE_CRYPTO_OPENSSL)
         cipher->key_len = supported_ciphers_key_size[method];
         cipher->iv_len = supported_ciphers_iv_size[method];
@@ -937,7 +937,7 @@ static int enc_key_init(enc_info * info, int method, const char *pass)
 #endif
 */
     } else {
-        cipher = (cipher_kt_t *)get_cipher_type(method);
+        cipher = (EVP_CIPHER *)get_cipher_type(method);
     }
 
     if (cipher == NULL) {
@@ -947,7 +947,7 @@ static int enc_key_init(enc_info * info, int method, const char *pass)
                 cipher_info.base = NULL;
                 cipher_info.key_length = supported_ciphers_key_size[method] * 8;
                 cipher_info.iv_size = supported_ciphers_iv_size[method];
-                cipher = (cipher_kt_t *)&cipher_info;
+                cipher = (EVP_CIPHER *)&cipher_info;
                 break;
             }
 #endif
